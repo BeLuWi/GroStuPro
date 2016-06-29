@@ -55,7 +55,7 @@ class Stream {
 		ArrayList<StreamWithCounter> tmpStreams = new ArrayList<StreamWithCounter>();
 		for (Author a : this.authors) {
 			for (StreamWithCounter glblStream : a.streamsAsAuthor) {
-				
+				found = false;
 				if (glblStream.stream.entryCount.getVal() > 100) {
 					StreamWithCounter globalStream = new StreamWithCounter(
 							glblStream.stream);

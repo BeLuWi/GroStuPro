@@ -197,7 +197,10 @@ public class SaxParser {
 
 			// maps.filterMap(localMap, globalMap);
 			System.out.println("Document ends.");
-			maps.authorSimilarity(fileLocation, method);
+			for(Author a: streamMap.get("actaC").authors){
+				System.out.println(a.name);
+			}
+			//maps.authorSimilarity(fileLocation, method);
 			System.out.println("Laufzeit" + " "
 					+ (System.currentTimeMillis() - time) / 1000 +"s");
 
@@ -218,7 +221,10 @@ public class SaxParser {
 
 			if (insideAuthorField) {
 				String Value = new String(ch, start, length);
+				
 
+				if(Value.equals("V"))System.exit(0);
+				
 				if (authorCount == 0) {
 					maps.addAuthor(Value, streamName, false, "");
 					mainAuthor = Value;

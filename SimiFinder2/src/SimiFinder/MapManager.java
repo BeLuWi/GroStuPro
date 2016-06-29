@@ -11,6 +11,8 @@ import java.util.Map.Entry;
 
 public class MapManager {
 	int authorCounter = 0, termCounter = 0;
+	private Map<String, Integer> globalTermCounter;
+	private Map<String, Integer> MaxVorkommenMap;
 	private Map<String, Term> globalMap;
 	// globalTerms sind alle Terms zusammen in einer Map. Der Key ist dabei der
 	// Term
@@ -20,7 +22,6 @@ public class MapManager {
 	// als
 	// Schl�ssel.
 	private Map<String, Map<String, LinkedTerm>> localMap;
-
 	/*
 	 * Struktur localMap: (Schl�ssel(Journal/ConferenceName)
 	 * ,(Schl�ssel(TermName),(Term(lokaler Term),Term(globaler Term)))
@@ -39,7 +40,9 @@ public class MapManager {
 			Map<String, Map<String, LinkedTerm>> inputLocal,
 			Map<String, Author> inputAuthor, Map<String, String[]> inputAlias,
 			Map<String, String> inputCoAuthor,
-			Map<String, Stream> inputStreamMap, StopWords inputStop) {
+			Map<String, Stream> inputStreamMap, StopWords inputStop,
+			Map<String, Integer> inputMaxVorkommenMap) {
+		this.MaxVorkommenMap = inputMaxVorkommenMap;
 		this.globalMap = inputGlobal;
 		this.localMap = inputLocal;
 		this.authorMap = inputAuthor;
@@ -53,15 +56,16 @@ public class MapManager {
 			File file = new File(fileLoc);
 
 			PrintStream ps = new PrintStream(file);
+			ps.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?> <!DOCTYPE out SYSTEM \"simiFinder.dtd\">");
 			ps.println("<out>");
 			for (String sName : this.streamMap.keySet()) {
-				if (this.streamMap.get(sName).entryCount.getVal() > 500) {
-					this.streamMap.get(sName).findCommonStreams(method);
+				if (this.streamMap.get(sName).entryCount > 500) {
+					this.streamMap.get(sName).findSimiStreams(method);
 					// findet alle gemeinsamen
 					ps.println("<stream key=\"" + this.streamMap.get(sName).type + sName + "\">");
 					for (StreamWithCounter s : this.streamMap.get(sName).commonStreams) {
-						ps.println("<entry name=\"" +s.stream.type + s.stream.name + "\" ratio=\""
-								+ s.counter.getDVal() + "\" />");
+						ps.println("<entry> name=\"" +s.stream.type + s.stream.name + "\" ratio=\""
+								+ s.counter.getDVal() + "\" </entry>");
 					}
 					ps.println("</stream>");
 				}
@@ -77,33 +81,33 @@ public class MapManager {
 
 	}
 
-	void addAuthor(String str, String stream, boolean isCoAuthor,
+	void addAuthorToAuthorAndStream(String str, String stream, boolean isCoAuthor,
 			String mainAuthorName) {
 		// fuegt ein und bearbeitet die author Elemente in authorMap und
 		// streamMap
 		if (authorMap.containsKey(str)) {
-			authorMap.get(str).addStream(streamMap.get(stream), isCoAuthor);
+			authorMap.get(str).addStreamToAuthor(streamMap.get(stream), isCoAuthor);
 
 			if (isCoAuthor) {
 				authorMap.get(mainAuthorName).coAuthors.add(authorMap.get(str));
-				//streamMap.get(stream).addCoAuthor(authorMap.get(str));
+				streamMap.get(stream).addCoAuthorToStream(authorMap.get(str));
 				
 			} else {
 
-				streamMap.get(stream).addAuthor(authorMap.get(str));
+				streamMap.get(stream).addAuthorToStream(authorMap.get(str));
 				
 			}
 
 		} else {
 			authorMap.put(str, new Author(str, streamMap));
-			authorMap.get(str).addStream(streamMap.get(stream), isCoAuthor);
+			authorMap.get(str).addStreamToAuthor(streamMap.get(stream), isCoAuthor);
 			if (isCoAuthor) {
 				authorMap.get(mainAuthorName).coAuthors.add(authorMap.get(str));
-				//streamMap.get(stream).addCoAuthor(authorMap.get(str));
+				streamMap.get(stream).addCoAuthorToStream(authorMap.get(str));
 			}
 
 			else {
-				this.streamMap.get(stream).addAuthor(authorMap.get(str));
+				this.streamMap.get(stream).addAuthorToStream(authorMap.get(str));
 			}
 		}
 	}
@@ -137,6 +141,10 @@ public class MapManager {
 				}
 			}
 		}
+		if (MaxVorkommenMap.containsKey(stream)){
+			if (localMap.get(stream).get(str).localTerm.counter.getVal()>MaxVorkommenMap.get(stream).intValue()){
+				MaxVorkommenMap.replace(stream, localMap.get(stream).get(str).localTerm.counter.getVal());
+			}}else{MaxVorkommenMap.put(stream, localMap.get(stream).get(str).localTerm.counter.getVal());}
 	}
 
 	void createAllNewEntry(String str, String stream) {
@@ -152,7 +160,7 @@ public class MapManager {
 
 		globalMap.put(str, glblTerm);
 		localMap.put(stream, tmpMap);
-
+		globalMap.get(str).streamCounter.inc();
 	}
 
 	void createNewLocalEntry(String str, String stream) {
@@ -167,7 +175,7 @@ public class MapManager {
 		tmpMap.put(str, tmpLTerm);
 
 		localMap.put(stream, tmpMap);
-
+		globalMap.get(str).streamCounter.inc();
 	}
 
 	void createNewTermEntry(String str, String stream) {
@@ -181,7 +189,7 @@ public class MapManager {
 		tmpMap.put(str, tmpLTerm);
 
 		localMap.get(stream).put(str, tmpLTerm);
-
+		globalMap.get(str).streamCounter.inc();
 	}
 
 	void addAlias(String str) {
@@ -247,17 +255,18 @@ class LinkedTerm {
 class Term {
 	String term;
 	Counter counter;
-
+	Counter streamCounter;
 	Term(String str) {
 		counter = new Counter();
 		term = str;
+		streamCounter = new Counter();
 	}
 
 }
 
 class Counter {
 	private int val;
-	private double dVal;
+	private double dVal, dVal2;
 
 	Counter() {
 		this.val = 1;
@@ -268,13 +277,18 @@ class Counter {
 		this.val++;
 		this.dVal += 1.0;
 	}
-
+	public void incVal2(){
+		this.dVal2 += 1.0;
+	}
 	public int getVal() {
 		return val;
 	}
 
 	public double getDVal() {
 		return dVal;
+	}
+	public double getDVal2(){
+		return dVal2;
 	}
 	public void setDVal(double d) {
 		this.dVal = d;
@@ -287,8 +301,12 @@ class Counter {
 	public void addDVal(double d) {
 		this.dVal += d;
 	}
+	public void addDVal2(double d){
+		this.dVal2 += d;
+	}
 	public void copy(Counter c){
 		this.val = c.getVal();
 		this.dVal = c.getDVal();
+		this.dVal2 = c.getDVal2();
 	}
 }

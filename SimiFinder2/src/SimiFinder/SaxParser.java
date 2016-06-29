@@ -16,7 +16,7 @@ import org.xml.sax.SAXParseException;
 import org.xml.sax.helpers.DefaultHandler;
 
 public class SaxParser {
-	private String fileLocation, stopWordsLocation, method;
+	private String fileLocation, stopWordsLocation, method, authorchunks = "";
 	private long time;
 	private boolean filterStopWords, noValidation;
 
@@ -48,8 +48,17 @@ public class SaxParser {
 					stopWordsLocation = s.split("-sw=")[1];
 				}
 				else if (s.startsWith("-asCA")){
-					method += "asCA";
+					method += "_asCA";
 					
+				}
+				else if (s.startsWith("-authors")){
+					method += "_authors";
+				}
+				else if (s.startsWith("-coauthors")){
+					method += "_coauthors";
+				}
+				else if(s.startsWith("-coAsCA")){
+					method += "_coAsCA";
 				}
 				else if(s.startsWith("-noValidation")){
 					noValidation = true;
@@ -100,7 +109,8 @@ public class SaxParser {
 		private Map<String, String[]> aliasMap = new HashMap<String, String[]>();
 		private Map<String, String> coAuthorMap = new HashMap<String, String>();
 		private Map<String, Stream> streamMap = new HashMap<String, Stream>();
-
+		private Map<String, Integer> MaxVorkommenMap = new HashMap<String, Integer>();
+		private
 		StopWords stop;
 		
 		ArrayList<String> stops = new ArrayList<String>();
@@ -112,7 +122,7 @@ public class SaxParser {
 				oldStreamName = "";
 
 		private MapManager maps = new MapManager(globalMap, localMap, authors,
-				aliasMap, coAuthorMap, streamMap, stop);
+				aliasMap, coAuthorMap, streamMap, stop, MaxVorkommenMap);
 		private int authorCount = 0;
 
 		public void setDocumentLocator(Locator locator) {
@@ -164,7 +174,15 @@ public class SaxParser {
 			}
 
 			if (rawName.equals("author")) {
+				if (authorCount == 0) {
+					maps.addAuthorToAuthorAndStream(authorchunks, streamName, false, "");
+					mainAuthor = authorchunks;
+				} else if (authorCount > 0 && !mainAuthor.equals("")) {
+					maps.addAuthorToAuthorAndStream(authorchunks, streamName, true, mainAuthor);
+				}
+				authorchunks = "";
 				authorCount++;
+				insideAuthorField = false;
 			}
 
 			if ((rawName.equals("article") || rawName.equals("inproceedings")
@@ -175,6 +193,9 @@ public class SaxParser {
 				getIt = false;
 				authorCount = 0;
 				mainAuthor = "";
+			}
+			if(rawName.equals("title")){
+				insideInterestingField = false;
 			}
 		}
 
@@ -197,10 +218,9 @@ public class SaxParser {
 
 			// maps.filterMap(localMap, globalMap);
 			System.out.println("Document ends.");
-			for(Author a: streamMap.get("actaC").authors){
-				System.out.println(a.name);
-			}
-			//maps.authorSimilarity(fileLocation, method);
+			//Vectorspace vs = new Vectorspace(String fileLocation);
+			//vs.AnfrageVR(localMap, MaxVorkommenMap);
+			maps.authorSimilarity(fileLocation, method);
 			System.out.println("Laufzeit" + " "
 					+ (System.currentTimeMillis() - time) / 1000 +"s");
 
@@ -219,26 +239,16 @@ public class SaxParser {
 				}
 			}
 
-			if (insideAuthorField) {
-				String Value = new String(ch, start, length);
-				
-
-				if(Value.equals("V"))System.exit(0);
-				
-				if (authorCount == 0) {
-					maps.addAuthor(Value, streamName, false, "");
-					mainAuthor = Value;
-				} else if (authorCount > 0 && !mainAuthor.equals("")) {
-					maps.addAuthor(Value, streamName, true, mainAuthor);
-				}
+			if (insideAuthorField) {//Da nicht immer der ganze String eingelesen wird
+				authorchunks += new String(ch, start, length);
 			}
 
 			if (insideWwwAuthorField) {
 
 			}
 
-			insideInterestingField = false;
-			insideAuthorField = false;
+
+
 		}
 
 		private void Message(String mode, SAXParseException exception) {

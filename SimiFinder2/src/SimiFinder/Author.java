@@ -17,12 +17,12 @@ class Author {
 		this.name = str;
 	}
 
-	void addStream(Stream stream, boolean isCoAuthor) {
+	void addStreamToAuthor(Stream stream, boolean isCoAuthor) {
 		boolean found = false;
 		if (isCoAuthor) {
 			for (StreamWithCounter s : streamsAsCoAuthor) {
 				if (s.stream.name.equals(stream.name)) {
-					s.counter.inc();
+					s.counter.incVal2();
 					found = true;
 					break;
 				}
@@ -47,5 +47,11 @@ class Author {
 	}
 
 }
-
-
+class AuthorWithCounter{
+	Author author;
+	Counter counter;
+	AuthorWithCounter(Author a){
+		this.author = a;
+		this.counter = new Counter();
+	}
+}

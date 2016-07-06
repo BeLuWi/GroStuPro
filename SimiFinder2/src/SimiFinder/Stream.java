@@ -6,32 +6,26 @@ import java.util.Comparator;
 
 class Stream {
 	String name;
-	String type;
 	ArrayList<Author> authors;
 	ArrayList<AuthorWithCounter> coAuthors;
 	ArrayList<StreamWithCounter> commonStreams;
-	int coAuthorsCount;
-	int entryCount;
+	Counter coAuthorsCount, entryCount;
 
-	Stream(String str, boolean journal) {
+	Stream(String str) {
 		this.name = str;
 		this.authors = new ArrayList<Author>();
 		this.coAuthors = new ArrayList<AuthorWithCounter>();
 		this.commonStreams = new ArrayList<StreamWithCounter>();
-		this.entryCount = 0;
-		this.coAuthorsCount = 0;
-		if (journal) {
-			this.type = "journals/";
-		} else {
-			this.type = "conf/";
-		}
+		this.entryCount = new Counter();
+		this.coAuthorsCount = new Counter();
+
 	}
 
 	void addAuthorToStream(Author author) {
 		// addAuthor fuegt author nur hinzu, falls er noch nicht existiert. Das
 		// alte Element muss nicht ueberschrieben werden, da es sich nur um
 		// einen Pointer handelt.
-		this.entryCount++;
+		this.entryCount.inc();
 		boolean found = false;
 
 		if (!authors.isEmpty()) {
@@ -50,7 +44,7 @@ class Stream {
 	}
 
 	void addCoAuthorToStream(Author author) {
-		this.coAuthorsCount++;
+		this.coAuthorsCount.inc();
 		boolean found = false;
 		if (!coAuthors.isEmpty()) {
 			for (AuthorWithCounter a : coAuthors) {
@@ -62,7 +56,7 @@ class Stream {
 		}
 		if (!found) {
 			this.coAuthors.add(new AuthorWithCounter(author));
-			
+
 		}
 
 	}
@@ -71,47 +65,34 @@ class Stream {
 		// baut commonStreams
 		ArrayList<StreamWithCounter> tmpStreams = new ArrayList<StreamWithCounter>();
 		boolean authors = false, asCA = false, coauthors = false, coAsCA = false;
-		if (method.contains("_authors"))	{authors = true;}
-		if (method.contains("_asCA"))		{asCA = true;}
-		if (method.contains("_coauthors")) 	{coauthors = true;}
-		if (method.contains("_coAsCa")) 	{coAsCA = true;}
+		if (method.contains("_authors")) {
+			authors = true;
+		}
+		if (method.contains("_asCA")) {
+			asCA = true;
+		}
+		if (method.contains("_coauthors")) {
+			coauthors = true;
+		}
+		if (method.contains("_coAsCA")) {
+			coAsCA = true;
+		}
 		boolean found = false;
 		if (authors || asCA) {
-
 			found = false;
 			for (Author a : this.authors) {
-				if (method.contains("_authors")) {
+				if (authors) {
 					for (StreamWithCounter glblStream : a.streamsAsAuthor) {
 
 						found = false;
-						if (glblStream.stream.entryCount > 100) {
-							StreamWithCounter globalStream = new StreamWithCounter(
-									glblStream.stream);
+						if (glblStream.stream.entryCount.getVal() > 100) {
+							StreamWithCounter globalStream = new StreamWithCounter(glblStream.stream);
 							globalStream.counter.copy(glblStream.counter);
-
-							// iteriert ueber alle Streams, in denen der Author
-							// als
-							// Hauptautor geschrieben hat und tut das fuer jeden
-							// Hauptautor
-							// der im aktuellen Stream geschrieben hat.
 							for (StreamWithCounter localStream : tmpStreams) {
-								// localStream ist der Stream, der bereits
-								// vorgekommen
-								// ist.
 
-								if (globalStream.stream.name
-										.equals(localStream.stream.name)
-										&& !globalStream.stream.name
-												.equals(this.name)) {
-									// wenn der Stream schon vorgekommen ist,
-									// wird
-									// sein
-									// counter, um den bereits vorhandenen
-									// Counter
-									// erhoeht
-									localStream.counter
-											.addDVal(globalStream.counter
-													.getDVal());
+								if (globalStream.stream.name.equals(localStream.stream.name)&& !globalStream.stream.name.equals(this.name)) {
+
+									localStream.counter.addDVal(globalStream.counter.getDVal());
 									found = true;
 									break;
 								}
@@ -127,19 +108,15 @@ class Stream {
 				if (asCA) {
 					for (StreamWithCounter glblStream : a.streamsAsCoAuthor) {
 						found = false;
-						if (glblStream.stream.entryCount > 100) {
+						if (glblStream.stream.entryCount.getVal() > 100) {
 							StreamWithCounter globalStream = new StreamWithCounter(
 									glblStream.stream);
+							globalStream.counter.copy(glblStream.counter);
 							for (StreamWithCounter localStream : tmpStreams) {
 
-								if (globalStream.stream.name
-										.equals(localStream.stream.name)
-										&& !globalStream.stream.name
-												.equals(this.name)) {
+								if (globalStream.stream.name.equals(localStream.stream.name)&& !globalStream.stream.name.equals(this.name)) {
 
-									localStream.counter
-											.addDVal2((globalStream.counter
-													.getDVal2() / 2));
+									localStream.counter.addDVal2(globalStream.counter.getDVal2());
 									found = true;
 									break;
 								}
@@ -154,16 +131,15 @@ class Stream {
 				}
 
 			}
-			if (authors)
+			if (authors) {
 				for (StreamWithCounter s : tmpStreams) {
-					s.counter.setDVal(s.counter.getDVal()
-							/ (double) s.stream.entryCount);
+					s.counter.setDVal(s.counter.getDVal()/ (double) s.stream.entryCount.getVal());
 				}
+			}
 			if (asCA) {
 				// consider appearances of each author as a coauthor
 				for (StreamWithCounter s : tmpStreams) {
-					s.counter.addDVal(s.counter.getDVal2()
-							/ (double) s.stream.coAuthorsCount);
+					s.counter.addDVal(s.counter.getDVal2()/ (double) s.stream.coAuthorsCount.getVal());
 				}
 			}
 
@@ -174,7 +150,7 @@ class Stream {
 				if (coauthors) {
 					for (StreamWithCounter glblStream : a.author.streamsAsAuthor) {
 						found = false;
-						if (glblStream.stream.entryCount > 100) {
+						if (glblStream.stream.entryCount.getVal() > 100) {
 							StreamWithCounter globalStream = new StreamWithCounter(
 									glblStream.stream);
 							globalStream.counter.copy(glblStream.counter);
@@ -203,9 +179,10 @@ class Stream {
 				if (coAsCA) {
 					for (StreamWithCounter glblStream : a.author.streamsAsCoAuthor) {
 						found = false;
-						if (glblStream.stream.entryCount > 100) {
+						if (glblStream.stream.entryCount.getVal() > 100) {
 							StreamWithCounter globalStream = new StreamWithCounter(
 									glblStream.stream);
+							globalStream.counter.copy(glblStream.counter);
 							for (StreamWithCounter localStream : tmpStreams) {
 
 								if (globalStream.stream.name
@@ -214,8 +191,8 @@ class Stream {
 												.equals(this.name)) {
 
 									localStream.counter
-											.addDVal2((globalStream.counter
-													.getDVal2() / 2));
+											.addDVal2(globalStream.counter
+													.getDVal2());
 									found = true;
 									break;
 								}
@@ -233,14 +210,14 @@ class Stream {
 			if (coauthors) {
 				for (StreamWithCounter s : tmpStreams) {
 					s.counter.setDVal(s.counter.getDVal()
-							/ (double) s.stream.entryCount);
+							/ (double) s.stream.entryCount.getVal());
 				}
 			}
 			if (coAsCA) {
 				// consider appearances of each coauthor as a coauthor
 				for (StreamWithCounter s : tmpStreams) {
 					s.counter.addDVal(s.counter.getDVal2()
-							/ (double) s.stream.coAuthorsCount);
+							/ (double) s.stream.coAuthorsCount.getVal());
 				}
 			}
 		}
@@ -261,7 +238,7 @@ class Stream {
 			});
 			int i = 0;
 			for (StreamWithCounter counted : tmpStreams) {
-				if (i < 10) {
+				if (i < 40) {
 					commonStreams.add(counted);
 					i++;
 				}

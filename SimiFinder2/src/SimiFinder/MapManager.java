@@ -11,7 +11,6 @@ import java.util.Map.Entry;
 
 public class MapManager {
 	int authorCounter = 0, termCounter = 0;
-	private Map<String, Integer> globalTermCounter;
 	private Map<String, Integer> MaxVorkommenMap;
 	private Map<String, Term> globalMap;
 	// globalTerms sind alle Terms zusammen in einer Map. Der Key ist dabei der
@@ -59,13 +58,13 @@ public class MapManager {
 			ps.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?> <!DOCTYPE out SYSTEM \"simiFinder.dtd\">");
 			ps.println("<out>");
 			for (String sName : this.streamMap.keySet()) {
-				if (this.streamMap.get(sName).entryCount > 500) {
+				if (this.streamMap.get(sName).entryCount.getVal() > 500) {
 					this.streamMap.get(sName).findSimiStreams(method);
 					// findet alle gemeinsamen
-					ps.println("<stream key=\"" + this.streamMap.get(sName).type + sName + "\">");
+					ps.println("<stream key=\"" +  sName + "\">");
 					for (StreamWithCounter s : this.streamMap.get(sName).commonStreams) {
-						ps.println("<entry> name=\"" +s.stream.type + s.stream.name + "\" ratio=\""
-								+ s.counter.getDVal() + "\" </entry>");
+						ps.println("<entry name=\""+ s.stream.name + "\" ratio=\""
+								+ s.counter.getDVal() + "\" />");
 					}
 					ps.println("</stream>");
 				}
@@ -91,6 +90,7 @@ public class MapManager {
 			if (isCoAuthor) {
 				authorMap.get(mainAuthorName).coAuthors.add(authorMap.get(str));
 				streamMap.get(stream).addCoAuthorToStream(authorMap.get(str));
+
 				
 			} else {
 
@@ -104,6 +104,7 @@ public class MapManager {
 			if (isCoAuthor) {
 				authorMap.get(mainAuthorName).coAuthors.add(authorMap.get(str));
 				streamMap.get(stream).addCoAuthorToStream(authorMap.get(str));
+
 			}
 
 			else {
@@ -271,6 +272,7 @@ class Counter {
 	Counter() {
 		this.val = 1;
 		this.dVal = 0.0;
+		this.dVal2 = 0.0;
 	}
 
 	public void inc() {

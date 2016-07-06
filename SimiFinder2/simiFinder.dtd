@@ -1,0 +1,5 @@
+<!ELEMENT out (stream)*>
+<!ELEMENT stream (entry)*>
+<!ATTLIST stream key CDATA #REQUIRED>
+<!ATTLIST entry name CDATA #REQUIRED
+		ratio CDATA #REQUIRED>

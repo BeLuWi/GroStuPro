@@ -16,7 +16,7 @@ import org.xml.sax.SAXParseException;
 import org.xml.sax.helpers.DefaultHandler;
 
 public class SaxParser {
-	private String fileLocation, stopWordsLocation, method, authorchunks = "";
+	private String fileLocation, stopWordsLocation = "", method, authorchunks = "";
 	private long time;
 	private boolean filterStopWords, noValidation;
 
@@ -110,14 +110,13 @@ public class SaxParser {
 		private Map<String, String> coAuthorMap = new HashMap<String, String>();
 		private Map<String, Stream> streamMap = new HashMap<String, Stream>();
 		private Map<String, Integer> MaxVorkommenMap = new HashMap<String, Integer>();
-		private
-		StopWords stop;
+		private StopWords stop = new StopWords(stopWordsLocation);
 		
 		ArrayList<String> stops = new ArrayList<String>();
 
 		private boolean insideInterestingField = false,
 				insideAuthorField = false, getIt = false,
-				insideWwwAuthorField = false, getWww = false, journal = false;
+				insideWwwAuthorField = false, getWww = false;
 		private String Value = "", streamName = "", mainAuthor = "",
 				oldStreamName = "";
 
@@ -137,15 +136,10 @@ public class SaxParser {
 				if (str.startsWith("journals/") || str.startsWith("conf/")) {
 					getIt = true;
 					String[] tmp = str.split("/");
-					streamName = tmp[1];
+					streamName = tmp[0]+"/" + tmp[1];
+
 					if (!oldStreamName.equals(streamName)) {
-						if (str.startsWith("journals/")) {
-							journal = true;
-						} else if (str.startsWith("conf/")) {
-							journal = false;
-						}
-						streamMap.put(streamName, new Stream(streamName,
-								journal));
+						streamMap.put(streamName, new Stream(streamName));
 						oldStreamName = streamName;
 					}
 				}
@@ -202,9 +196,7 @@ public class SaxParser {
 		@Override
 		public void startDocument() {
 			System.out.println("Document starts.");
-			if (filterStopWords){
-				stop = new StopWords(stopWordsLocation);
-			}
+
 		}
 
 		@Override
@@ -235,7 +227,7 @@ public class SaxParser {
 				for (String s : tokens) {
 					s = s.replaceAll("[^a-zA-Z]", "");
 					s = s.toLowerCase();
-					maps.addTerm(s, streamName, filterStopWords);
+					//maps.addTerm(s, streamName, filterStopWords);
 				}
 			}
 
